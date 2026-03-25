@@ -1,4 +1,7 @@
-import { GalleryLayoutType, PrismaClient } from "../src/generated/prisma/client";
+import {
+  GalleryLayoutType,
+  PrismaClient,
+} from "../src/generated/prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -13,10 +16,10 @@ async function main() {
   await prisma.invitation.create({
     data: {
       slug: invitationSlug,
-      title: "재일 그리고 수민",
+      title: "재일 그리고 성은",
       subtitle: "햇살처럼 환한 하루에, 소중한 분들을 초대합니다.",
       groomName: "재일",
-      brideName: "수민",
+      brideName: "성은",
       ceremonyAt: new Date("2026-11-14T13:00:00+09:00"),
       venueName: "가든 라이트 홀",
       venueFloor: "2층 오로라 가든",
@@ -44,7 +47,7 @@ async function main() {
         },
         {
           label: "신부에게 연락",
-          name: "수민",
+          name: "성은",
           relation: "신부",
           phone: "010-8765-4321",
         },
@@ -58,12 +61,12 @@ async function main() {
       giftAccounts: [
         {
           bank: "국민은행",
-          accountHolder: "김재일",
+          accountHolder: "신재일",
           accountNumber: "123456-78-123456",
         },
         {
           bank: "신한은행",
-          accountHolder: "이수민",
+          accountHolder: "이성은",
           accountNumber: "987-654-321000",
         },
       ],

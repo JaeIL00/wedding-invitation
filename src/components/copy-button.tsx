@@ -32,7 +32,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={handleCopy}
-      className={`min-h-12 rounded-full border border-[var(--line)] bg-white/80 px-4 text-sm font-medium text-[var(--foreground)] transition hover:bg-white ${className}`}
+      className={`secondary-button ${className}`}
     >
       {copied ? "복사됨" : label}
     </button>
