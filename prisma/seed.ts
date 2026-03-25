@@ -1,7 +1,7 @@
 import {
   GalleryLayoutType,
   PrismaClient,
-} from "../src/generated/prisma/client";
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 

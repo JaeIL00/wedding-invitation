@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { MealPreference, RsvpStatus } from "@/generated/prisma/client";
+import { MealPreference, RsvpStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone, type RsvpFormInput, rsvpFormSchema } from "@/lib/rsvp";
 

@@ -1,4 +1,4 @@
-import { MealPreference, RsvpStatus } from "@/generated/prisma/client";
+import { MealPreference, RsvpStatus } from "@prisma/client";
 import { z } from "zod";
 
 export function normalizePhone(value: string) {
