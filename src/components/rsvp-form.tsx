@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   initialRsvpState,
   submitRsvp,
@@ -19,12 +20,15 @@ const MEAL_PREFERENCE = {
 } as const;
 
 function SubmitButton() {
+  const { pending } = useFormStatus();
+
   return (
     <button
       type="submit"
-      className="min-h-12 w-full rounded-full bg-[var(--foreground)] px-5 text-sm font-semibold text-white transition hover:opacity-90"
+      disabled={pending}
+      className="primary-button w-full disabled:cursor-wait disabled:opacity-70"
     >
-      참석 의사 전달하기
+      {pending ? "전송 중..." : "참석 의사 전달하기"}
     </button>
   );
 }
@@ -34,7 +38,24 @@ function FieldError({ message }: { message?: string }) {
     return null;
   }
 
-  return <p className="mt-2 text-sm text-[#b6493d]">{message}</p>;
+  return <p className="mt-2 text-sm text-[#9a4c44]">{message}</p>;
+}
+
+function getChoiceClassName(isSelected: boolean) {
+  return [
+    "flex min-h-[3rem] items-center justify-center rounded-[1rem] border px-4 text-sm font-medium transition",
+    isSelected
+      ? "border-[var(--line-strong)] bg-[var(--accent-soft)] text-[var(--foreground)] shadow-[0_8px_24px_rgba(35,32,29,0.06)]"
+      : "border-[var(--line)] bg-white text-[var(--foreground)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-soft)]",
+  ].join(" ");
+}
+
+function getFieldClassName(disabled = false) {
+  return [
+    "mt-2 w-full rounded-[1rem] border border-[var(--line)] bg-white px-4 text-[0.98rem] outline-none shadow-[0_10px_24px_rgba(13,20,17,0.03)]",
+    "focus:border-[var(--line-strong)] focus:bg-white",
+    disabled ? "opacity-55 shadow-none" : "",
+  ].join(" ");
 }
 
 export function RsvpForm({ invitationId }: { invitationId: number }) {
@@ -58,11 +79,11 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
       ref={formRef}
       action={formAction}
       onReset={() => setStatus(RSVP_STATUS.ATTENDING)}
-      className="surface-card px-5 py-5"
+      className="rsvp-form"
     >
       <input type="hidden" name="invitationId" value={invitationId} />
 
-      <div className="space-y-5">
+      <div className="space-y-6">
         <div>
           <label className="block text-sm font-semibold text-[var(--foreground)]">
             성함
@@ -71,7 +92,7 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
             name="name"
             autoComplete="name"
             placeholder="예: 김하객"
-            className="mt-2 min-h-12 w-full rounded-[1.2rem] border border-[var(--line)] bg-white px-4 text-base outline-none transition focus:border-[var(--accent-strong)]"
+            className={`${getFieldClassName()} min-h-[3rem]`}
           />
           <FieldError message={state.fieldErrors?.name} />
         </div>
@@ -85,7 +106,7 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
             autoComplete="tel"
             inputMode="tel"
             placeholder="010-1234-5678"
-            className="mt-2 min-h-12 w-full rounded-[1.2rem] border border-[var(--line)] bg-white px-4 text-base outline-none transition focus:border-[var(--accent-strong)]"
+            className={`${getFieldClassName()} min-h-[3rem]`}
           />
           <FieldError message={state.fieldErrors?.phone} />
         </div>
@@ -95,22 +116,23 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
             참석 여부
           </label>
           <div className="mt-2 grid grid-cols-2 gap-3">
-            <label className="flex min-h-12 items-center justify-center rounded-[1.2rem] border border-[var(--line)] bg-white px-4 text-sm font-medium text-[var(--foreground)]">
+            <label className={getChoiceClassName(status === RSVP_STATUS.ATTENDING)}>
               <input
                 type="radio"
                 name="status"
                 value={RSVP_STATUS.ATTENDING}
-                defaultChecked
+                checked={status === RSVP_STATUS.ATTENDING}
                 onChange={() => setStatus(RSVP_STATUS.ATTENDING)}
                 className="sr-only"
               />
               참석 예정입니다
             </label>
-            <label className="flex min-h-12 items-center justify-center rounded-[1.2rem] border border-[var(--line)] bg-white px-4 text-sm font-medium text-[var(--foreground)]">
+            <label className={getChoiceClassName(status === RSVP_STATUS.DECLINED)}>
               <input
                 type="radio"
                 name="status"
                 value={RSVP_STATUS.DECLINED}
+                checked={status === RSVP_STATUS.DECLINED}
                 onChange={() => setStatus(RSVP_STATUS.DECLINED)}
                 className="sr-only"
               />
@@ -132,7 +154,7 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
               max={6}
               defaultValue={0}
               disabled={status === RSVP_STATUS.DECLINED}
-              className="mt-2 min-h-12 w-full rounded-[1.2rem] border border-[var(--line)] bg-white px-4 text-base outline-none transition disabled:opacity-50 focus:border-[var(--accent-strong)]"
+              className={`${getFieldClassName(status === RSVP_STATUS.DECLINED)} min-h-[3rem] disabled:cursor-not-allowed`}
             />
             <FieldError message={state.fieldErrors?.companionCount} />
           </div>
@@ -145,7 +167,7 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
               name="mealPreference"
               defaultValue={MEAL_PREFERENCE.YES}
               disabled={status === RSVP_STATUS.DECLINED}
-              className="mt-2 min-h-12 w-full rounded-[1.2rem] border border-[var(--line)] bg-white px-4 text-base outline-none transition disabled:opacity-50 focus:border-[var(--accent-strong)]"
+              className={`${getFieldClassName(status === RSVP_STATUS.DECLINED)} min-h-[3rem] disabled:cursor-not-allowed`}
             >
               <option value={MEAL_PREFERENCE.YES}>식사 예정</option>
               <option value={MEAL_PREFERENCE.NO}>식사 안 함</option>
@@ -163,23 +185,23 @@ export function RsvpForm({ invitationId }: { invitationId: number }) {
             name="note"
             rows={4}
             placeholder="전달하고 싶은 메시지가 있다면 남겨주세요."
-            className="mt-2 w-full rounded-[1.2rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent-strong)]"
+            className={`${getFieldClassName()} py-3`}
           />
           <FieldError message={state.fieldErrors?.note} />
         </div>
       </div>
 
-      <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+      <p className="mt-6 text-[0.92rem] leading-6 text-[var(--muted)]">
         같은 연락처는 한 번만 등록됩니다. 수정이 필요하면 신랑 또는 신부에게
         직접 알려주세요.
       </p>
 
       {state.message ? (
         <div
-          className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm leading-6 ${
+          className={`mt-4 rounded-[1rem] px-4 py-3 text-[0.92rem] leading-6 ${
             state.status === "success"
-              ? "bg-[#e9f3e2] text-[#3f5f2d]"
-              : "bg-[#fff0ea] text-[#9d4d41]"
+              ? "border border-[var(--line)] bg-[var(--surface-soft)] text-[var(--foreground)]"
+              : "border border-[#f0d2c8] bg-[#fdf1ec] text-[#925145]"
           }`}
         >
           {state.message}

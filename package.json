@@ -5,11 +5,13 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint . --ignore-pattern '.pnp.*'",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:seed": "node --env-file=.env --import tsx prisma/seed.ts"
   },

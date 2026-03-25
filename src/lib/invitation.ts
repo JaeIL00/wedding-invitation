@@ -1,3 +1,5 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -48,6 +50,12 @@ export type InvitationViewModel = {
     description: string;
     accentColor: string;
   }>;
+  galleryPhotos: Array<{
+    src: string;
+    alt: string;
+    title?: string;
+    description?: string;
+  }>;
   faqItems: Array<{
     id: number;
     question: string;
@@ -68,6 +76,37 @@ function buildMapLinks(venueName: string, address: string) {
     naver: `https://map.naver.com/p/search/${destination}`,
     tmap: `https://www.tmap.co.kr/tmap2/mobile/route.jsp?name=${destination}`,
   };
+}
+
+const GALLERY_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+
+async function getGalleryPhotos(
+  groomName: string,
+  brideName: string,
+  galleryItems: InvitationViewModel["galleryItems"],
+) {
+  try {
+    const galleryDir = path.join(process.cwd(), "public", "gallery");
+    const entries = await readdir(galleryDir, { withFileTypes: true });
+    const filenames = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((filename) => GALLERY_EXTENSIONS.has(path.extname(filename).toLowerCase()))
+      .sort((left, right) => left.localeCompare(right, "ko"));
+
+    return filenames.map((filename, index) => {
+      const caption = galleryItems[index];
+
+      return {
+        src: `/gallery/${filename}`,
+        alt: `${groomName}와 ${brideName}의 웨딩 사진 ${index + 1}`,
+        title: caption?.title,
+        description: caption?.description,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function getInvitationViewModel(
@@ -92,6 +131,19 @@ export async function getInvitationViewModel(
   const contactCards = z.array(contactCardSchema).parse(invitation.contactCards);
   const giftAccounts = z.array(giftAccountSchema).parse(invitation.giftAccounts);
   const mapLinks = buildMapLinks(invitation.venueName, invitation.address);
+  const galleryItems = invitation.galleryItems.map((item) => ({
+    id: item.id,
+    order: item.order,
+    layoutType: item.layoutType,
+    title: item.title,
+    description: item.description,
+    accentColor: item.accentColor,
+  }));
+  const galleryPhotos = await getGalleryPhotos(
+    invitation.groomName,
+    invitation.brideName,
+    galleryItems,
+  );
 
   return {
     id: invitation.id,
@@ -120,14 +172,8 @@ export async function getInvitationViewModel(
     hostMessage: invitation.hostMessage,
     contactCards,
     giftAccounts,
-    galleryItems: invitation.galleryItems.map((item) => ({
-      id: item.id,
-      order: item.order,
-      layoutType: item.layoutType,
-      title: item.title,
-      description: item.description,
-      accentColor: item.accentColor,
-    })),
+    galleryItems,
+    galleryPhotos,
     faqItems: invitation.faqItems.map((item) => ({
       id: item.id,
       question: item.question,

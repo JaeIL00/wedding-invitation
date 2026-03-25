@@ -1,22 +1,35 @@
+import { access } from "node:fs/promises";
+import path from "node:path";
+import Image from "next/image";
 import {
   CalendarDays,
   ChevronRight,
   Clock3,
-  Heart,
-  ImageIcon,
   MapPinned,
   Phone,
   Route,
-  Sparkles,
   TrainFront,
   Wallet,
 } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { CountdownPanel } from "@/components/countdown-panel";
+import { PhotoGallery } from "@/components/photo-gallery";
 import { RsvpForm } from "@/components/rsvp-form";
-import { getInvitationViewModel } from "@/lib/invitation";
+import { SectionNav } from "@/components/section-nav";
+import { getInvitationViewModel, type InvitationViewModel } from "@/lib/invitation";
 
 export const dynamic = "force-dynamic";
+
+const HERO_IMAGE_PATH = "/hero-main.jpg";
+
+async function hasPublicAsset(assetPath: string) {
+  try {
+    await access(path.join(process.cwd(), "public", assetPath.replace(/^\//, "")));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function SectionHeading({
   eyebrow,
@@ -28,31 +41,343 @@ function SectionHeading({
   description: string;
 }) {
   return (
-    <div className="mb-5 px-1">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-        {eyebrow}
-      </p>
-      <h2 className="mt-2 font-display text-[1.85rem] leading-tight text-[var(--foreground)]">
-        {title}
-      </h2>
-      <p className="mt-3 text-[0.95rem] leading-7 text-[var(--muted)]">
-        {description}
-      </p>
+    <div className="section-heading">
+      <p className="section-eyebrow">{eyebrow}</p>
+      <h2 className="section-title">{title}</h2>
+      <p className="section-description">{description}</p>
     </div>
   );
 }
 
-function getGalleryLayoutClass(layoutType: string) {
-  switch (layoutType) {
-    case "HERO":
-      return "gallery-hero md:col-span-2";
-    case "WIDE":
-      return "gallery-wide md:col-span-2";
-    case "TALL":
-      return "gallery-tall";
-    default:
-      return "gallery-grid";
+function HeroImage({
+  hasHeroImage,
+  invitation,
+}: {
+  hasHeroImage: boolean;
+  invitation: InvitationViewModel;
+}) {
+  if (!hasHeroImage) {
+    return (
+      <div className="hero-fallback">
+        <p className="section-eyebrow">Hero image</p>
+        <p className="hero-fallback__title">{invitation.heroMoodTitle}</p>
+        <p className="hero-fallback__description">
+          대표 사진을 `public/hero-main.jpg`에 추가하면 첫 화면에서 바로 보여드립니다.
+        </p>
+      </div>
+    );
   }
+
+  return (
+    <figure className="hero-image">
+      <div className="hero-image__frame">
+        <Image
+          src={HERO_IMAGE_PATH}
+          alt={`${invitation.groomName}와 ${invitation.brideName}의 웨딩 사진`}
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 34rem"
+          className="object-cover"
+        />
+      </div>
+    </figure>
+  );
+}
+
+function Hero({
+  invitation,
+  hasHeroImage,
+}: {
+  invitation: InvitationViewModel;
+  hasHeroImage: boolean;
+}) {
+  return (
+    <section className="section-shell px-5 pt-5">
+      <div className="hero-shell">
+        <HeroImage invitation={invitation} hasHeroImage={hasHeroImage} />
+
+        <div className="hero-copy">
+          <p className="hero-kicker">Wedding invitation</p>
+          <p className="hero-date">{invitation.scheduleSummary}</p>
+          <h1 className="hero-title">
+            <span>{invitation.groomName}</span>
+            <span className="hero-title__ampersand">&</span>
+            <span>{invitation.brideName}</span>
+          </h1>
+          <p className="hero-description">{invitation.subtitle}</p>
+        </div>
+
+        <div className="hero-meta">
+          <div className="hero-meta__item">
+            <CalendarDays className="h-4 w-4" />
+            <div>
+              <p className="hero-meta__label">예식 일시</p>
+              <p className="hero-meta__value">{invitation.ceremonyLabel}</p>
+            </div>
+          </div>
+          <div className="hero-meta__item">
+            <MapPinned className="h-4 w-4" />
+            <div>
+              <p className="hero-meta__label">예식 장소</p>
+              <p className="hero-meta__value">
+                {invitation.venueName}
+                {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function InvitationIntro({
+  invitation,
+}: {
+  invitation: InvitationViewModel;
+}) {
+  return (
+    <section id="invitation" className="section-shell section-block px-5">
+      <SectionHeading
+        eyebrow="Invitation"
+        title={invitation.welcomeTitle}
+        description="첫 인상은 사진이 맡고, 초대말은 더 차분한 리듬으로 읽히도록 다시 정리했습니다."
+      />
+
+      <div className="editorial-copy">
+        <p className="editorial-copy__title">{invitation.title}</p>
+        <p className="editorial-copy__body">{invitation.welcomeMessage}</p>
+        {invitation.hostMessage ? (
+          <blockquote className="editorial-quote">{invitation.hostMessage}</blockquote>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function ScheduleAndLocation({
+  invitation,
+}: {
+  invitation: InvitationViewModel;
+}) {
+  return (
+    <section id="schedule" className="section-shell section-block px-5">
+      <SectionHeading
+        eyebrow="Schedule"
+        title="예식 안내"
+        description="날짜와 위치, 길찾기와 교통 팁을 한 흐름 안에서 빠르게 확인할 수 있게 정리했습니다."
+      />
+
+      <CountdownPanel targetDate={invitation.ceremonyAt} />
+
+      <div id="location" className="fact-list mt-8">
+        <div className="fact-row">
+          <div className="fact-row__icon">
+            <Clock3 className="h-4 w-4" />
+          </div>
+          <div className="fact-row__content">
+            <p className="fact-row__label">Ceremony</p>
+            <p className="fact-row__title">{invitation.ceremonyLabel}</p>
+          </div>
+        </div>
+
+        <div className="fact-row">
+          <div className="fact-row__icon">
+            <MapPinned className="h-4 w-4" />
+          </div>
+          <div className="fact-row__content">
+            <p className="fact-row__label">Venue</p>
+            <p className="fact-row__title">
+              {invitation.venueName}
+              {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
+            </p>
+            <p className="fact-row__detail">
+              {invitation.address}
+              {invitation.addressDetail ? (
+                <>
+                  <br />
+                  {invitation.addressDetail}
+                </>
+              ) : null}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="action-row mt-8">
+        <a
+          href={invitation.mapLinks.naver}
+          target="_blank"
+          rel="noreferrer"
+          className="primary-button"
+        >
+          네이버지도로 길찾기
+        </a>
+        <CopyButton value={invitation.address} label="주소 복사" />
+      </div>
+
+      <details className="inline-disclosure mt-4">
+        <summary className="inline-disclosure__summary">
+          <span>다른 지도 앱 보기</span>
+          <ChevronRight className="inline-disclosure__chevron h-4 w-4" />
+        </summary>
+        <div className="action-row mt-4">
+          <a
+            href={invitation.mapLinks.kakao}
+            target="_blank"
+            rel="noreferrer"
+            className="secondary-button"
+          >
+            카카오맵
+          </a>
+          <a
+            href={invitation.mapLinks.tmap}
+            target="_blank"
+            rel="noreferrer"
+            className="secondary-button"
+          >
+            티맵
+          </a>
+        </div>
+      </details>
+
+      <div className="narrative-list mt-8">
+        <div className="narrative-item">
+          <div className="narrative-item__title">
+            <Route className="h-4 w-4" />
+            길안내
+          </div>
+          <p className="narrative-item__body">{invitation.directions}</p>
+        </div>
+
+        <div className="narrative-item">
+          <div className="narrative-item__title">
+            <TrainFront className="h-4 w-4" />
+            교통 팁
+          </div>
+          <p className="narrative-item__body">{invitation.transitTips}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GallerySection({
+  invitation,
+}: {
+  invitation: InvitationViewModel;
+}) {
+  if (!invitation.galleryPhotos.length) {
+    return null;
+  }
+
+  return (
+    <section id="gallery" className="section-shell section-block px-5">
+      <SectionHeading
+        eyebrow="Gallery"
+        title="웨딩 갤러리"
+        description="사진을 가볍게 둘러본 뒤, 터치해서 전체 화면으로 넘겨보실 수 있게 구성했습니다."
+      />
+      <PhotoGallery photos={invitation.galleryPhotos} />
+    </section>
+  );
+}
+
+function AdditionalInfoSection({
+  invitation,
+}: {
+  invitation: InvitationViewModel;
+}) {
+  return (
+    <section className="section-shell section-block px-5">
+      <SectionHeading
+        eyebrow="More"
+        title="추가 안내"
+        description="연락처, 계좌, 자주 묻는 안내는 필요한 분들만 펼쳐보실 수 있게 한곳에 모았습니다."
+      />
+
+      <div className="accordion-list mt-8">
+        <details className="accordion-row">
+          <summary className="accordion-row__summary">
+            <div>
+              <p className="accordion-row__eyebrow">Contact</p>
+              <p className="accordion-row__title">연락처 안내</p>
+            </div>
+            <ChevronRight className="accordion-row__chevron h-4 w-4" />
+          </summary>
+          <div className="accordion-row__content">
+            <div className="detail-list">
+              {invitation.contactCards.map((contact) => (
+                <a
+                  key={contact.label}
+                  href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`}
+                  className="detail-item"
+                >
+                  <div className="detail-item__icon">
+                    <Phone className="h-4 w-4" />
+                  </div>
+                  <div className="detail-item__content">
+                    <p className="detail-item__label">{contact.label}</p>
+                    <p className="detail-item__title">{contact.name}</p>
+                    <p className="detail-item__meta">
+                      {contact.relation} · {contact.phone}
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </details>
+
+        <details className="accordion-row">
+          <summary className="accordion-row__summary">
+            <div>
+              <p className="accordion-row__eyebrow">Gift</p>
+              <p className="accordion-row__title">마음 전하실 곳</p>
+            </div>
+            <ChevronRight className="accordion-row__chevron h-4 w-4" />
+          </summary>
+          <div className="accordion-row__content">
+            <div className="detail-list">
+              {invitation.giftAccounts.map((account) => (
+                <div key={account.accountNumber} className="detail-item">
+                  <div className="detail-item__icon">
+                    <Wallet className="h-4 w-4" />
+                  </div>
+                  <div className="detail-item__content">
+                    <p className="detail-item__label">{account.bank}</p>
+                    <p className="detail-item__title">{account.accountHolder}</p>
+                    <p className="detail-item__meta">{account.accountNumber}</p>
+                  </div>
+                  <CopyButton value={account.accountNumber} label="복사" className="shrink-0" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+
+        <details className="accordion-row">
+          <summary className="accordion-row__summary">
+            <div>
+              <p className="accordion-row__eyebrow">FAQ</p>
+              <p className="accordion-row__title">자주 묻는 안내</p>
+            </div>
+            <ChevronRight className="accordion-row__chevron h-4 w-4" />
+          </summary>
+          <div className="accordion-row__content">
+            <div className="faq-list">
+              {invitation.faqItems.map((item) => (
+                <div key={item.id} className="faq-item">
+                  <p className="faq-item__question">{item.question}</p>
+                  <p className="faq-item__answer">{item.answer}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+  );
 }
 
 export default async function Home() {
@@ -61,12 +386,10 @@ export default async function Home() {
   if (!invitation) {
     return (
       <main className="section-shell flex min-h-screen items-center px-5 py-16">
-        <div className="surface-card w-full px-6 py-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-            Setup Needed
-          </p>
-          <h1 className="mt-3 font-display text-3xl">청첩장 데이터가 아직 없습니다.</h1>
-          <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
+        <div className="empty-state w-full">
+          <p className="section-eyebrow">Setup needed</p>
+          <h1 className="empty-state__title">청첩장 데이터가 아직 없습니다.</h1>
+          <p className="empty-state__body">
             `yarn db:up`, `yarn db:migrate --name init`, `yarn db:seed` 순서로
             실행하면 첫 화면이 채워집니다.
           </p>
@@ -75,387 +398,32 @@ export default async function Home() {
     );
   }
 
+  const hasHeroImage = await hasPublicAsset(HERO_IMAGE_PATH);
   const quickLinks = [
     { href: "#invitation", label: "초대말" },
     { href: "#schedule", label: "예식안내" },
-    { href: "#location", label: "오시는 길" },
-    { href: "#gallery", label: "사진" },
+    ...(invitation.galleryPhotos.length ? [{ href: "#gallery", label: "사진" }] : []),
     { href: "#rsvp", label: "RSVP" },
   ];
 
   return (
-    <main className="relative flex-1 pb-28">
-      <section className="section-shell px-5 pt-6">
-        <div className="surface-card overflow-hidden px-5 pb-6 pt-6">
-          <div className="flex items-center justify-between">
-            <span className="gradient-tag">
-              <Sparkles className="h-3.5 w-3.5" />
-              WEDDING DAY
-            </span>
-            <span className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Mobile Invitation
-            </span>
-          </div>
-
-          <p className="mt-6 text-sm leading-7 text-[var(--muted)]">
-            {invitation.subtitle}
-          </p>
-
-          <h1 className="mt-4 font-display text-[2.65rem] leading-none text-[var(--foreground)]">
-            {invitation.groomName}
-            <span className="mx-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-xl text-[var(--accent-strong)]">
-              &
-            </span>
-            {invitation.brideName}
-          </h1>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div className="rounded-[1.4rem] bg-white/75 px-4 py-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Date
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6">
-                {invitation.scheduleSummary}
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] bg-white/75 px-4 py-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Place
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6">
-                {invitation.venueName}
-                {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
-              </p>
-            </div>
-          </div>
-
-          <div className="hero-placeholder mt-5 px-5 py-5">
-            <div className="soft-pill inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--foreground)]">
-              <ImageIcon className="h-4 w-4 text-[var(--accent-strong)]" />
-              사진 placeholder
-            </div>
-            <div className="absolute inset-x-5 bottom-5 rounded-[1.5rem] bg-white/70 p-4 backdrop-blur">
-              <p className="font-display text-xl text-[var(--foreground)]">
-                {invitation.heroMoodTitle}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                {invitation.heroMoodDescription}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <a
-              href="#rsvp"
-              className="flex min-h-12 items-center justify-center rounded-full bg-[var(--foreground)] px-5 text-sm font-semibold text-white"
-            >
-              참석 회신하기
-            </a>
-            <a
-              href="#location"
-              className="flex min-h-12 items-center justify-center rounded-full border border-[var(--line)] bg-white/80 px-5 text-sm font-semibold text-[var(--foreground)]"
-            >
-              길찾기 보기
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <nav className="sticky top-0 z-20 mt-5 border-y border-white/60 bg-[rgba(255,250,242,0.82)] backdrop-blur">
-        <div className="section-shell flex gap-2 overflow-x-auto px-5 py-3">
-          {quickLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="soft-pill flex min-h-12 shrink-0 items-center px-4 text-sm font-medium text-[var(--foreground)]"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </nav>
-
-      <section id="invitation" className="section-shell px-5 pt-8">
-        <SectionHeading
-          eyebrow="Invitation"
-          title={invitation.welcomeTitle}
-          description="예식에 오시는 분들이 첫 화면부터 기분 좋게 읽을 수 있도록 문장을 짧고 따뜻하게 배치했습니다."
-        />
-        <div className="surface-card px-5 py-6">
-          <p className="font-display text-2xl leading-10 text-[var(--foreground)]">
-            {invitation.title}
-          </p>
-          <p className="mt-5 text-[0.98rem] leading-8 text-[var(--muted)]">
-            {invitation.welcomeMessage}
-          </p>
-          {invitation.hostMessage ? (
-            <div className="mt-5 rounded-[1.5rem] bg-white/70 p-4">
-              <p className="text-sm leading-7 text-[var(--muted)]">
-                {invitation.hostMessage}
-              </p>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section id="schedule" className="section-shell px-5 pt-9">
-        <SectionHeading
-          eyebrow="Schedule"
-          title="예식 일정"
-          description="모바일에서 가장 먼저 확인하는 일정과 장소 정보를 한 영역에 모았습니다."
-        />
-        <CountdownPanel targetDate={invitation.ceremonyAt} />
-        <div className="mt-4 grid gap-3">
-          <div className="surface-card flex gap-4 px-5 py-4">
-            <div className="mt-1 rounded-full bg-white/75 p-3 text-[var(--accent-strong)]">
-              <CalendarDays className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Ceremony
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6">
-                {invitation.ceremonyLabel}
-              </p>
-            </div>
-          </div>
-          <div className="surface-card flex gap-4 px-5 py-4">
-            <div className="mt-1 rounded-full bg-white/75 p-3 text-[var(--accent-strong)]">
-              <Clock3 className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                Place
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6">
-                {invitation.venueName}
-                {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="location" className="section-shell px-5 pt-9">
-        <SectionHeading
-          eyebrow="Location"
-          title="오시는 길"
-          description="임베드 지도 대신 주소 복사와 외부 지도 앱 이동을 바로 제공해 접근성을 높였습니다."
-        />
-        <div className="surface-card px-5 py-5">
-          <div className="flex gap-4">
-            <div className="mt-1 rounded-full bg-white/75 p-3 text-[var(--accent-strong)]">
-              <MapPinned className="h-5 w-5" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold leading-6">
-                {invitation.venueName}
-                {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
-              </p>
-              <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                {invitation.address}
-                <br />
-                {invitation.addressDetail}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <CopyButton value={invitation.address} label="주소 복사" />
-            <a
-              href={invitation.mapLinks.naver}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-12 items-center rounded-full border border-[var(--line)] bg-white/80 px-4 text-sm font-medium text-[var(--foreground)]"
-            >
-              네이버지도
-            </a>
-            <a
-              href={invitation.mapLinks.kakao}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-12 items-center rounded-full border border-[var(--line)] bg-white/80 px-4 text-sm font-medium text-[var(--foreground)]"
-            >
-              카카오맵
-            </a>
-            <a
-              href={invitation.mapLinks.tmap}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-12 items-center rounded-full border border-[var(--line)] bg-white/80 px-4 text-sm font-medium text-[var(--foreground)]"
-            >
-              티맵
-            </a>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <div className="rounded-[1.5rem] bg-white/70 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Route className="h-4 w-4 text-[var(--accent-strong)]" />
-                길안내
-              </div>
-              <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                {invitation.directions}
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] bg-white/70 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <TrainFront className="h-4 w-4 text-[var(--accent-strong)]" />
-                교통 팁
-              </div>
-              <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                {invitation.transitTips}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="gallery" className="section-shell px-5 pt-9">
-        <SectionHeading
-          eyebrow="Gallery"
-          title="사진 자리 미리보기"
-          description="실제 사진 업로드 전에는 레이아웃과 분위기 설명만 유지합니다. 이미지 파일을 추가하면 같은 슬롯에 교체할 수 있습니다."
-        />
-        <div className="grid gap-3 md:grid-cols-2">
-          {invitation.galleryItems.map((item) => (
-            <article
-              key={item.id}
-              className={`gallery-card ${getGalleryLayoutClass(item.layoutType)}`}
-              style={{ ["--card-accent" as string]: item.accentColor }}
-            >
-              <span className="soft-pill inline-flex min-h-10 items-center px-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--foreground)]">
-                {item.layoutType}
-              </span>
-              <h3 className="mt-6 font-display text-2xl leading-tight text-[var(--foreground)]">
-                {item.title}
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                {item.description}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="contacts" className="section-shell px-5 pt-9">
-        <SectionHeading
-          eyebrow="Contact"
-          title="연락처 안내"
-          description="바로 연락이 필요한 손님을 위해 신랑, 신부, 가족 연락처를 카드형으로 정리합니다."
-        />
-        <div className="grid gap-3">
-          {invitation.contactCards.map((contact) => (
-            <div key={contact.label} className="surface-card px-5 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                    {contact.label}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
-                    {contact.name}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">
-                    {contact.relation}
-                  </p>
-                </div>
-                <div className="rounded-full bg-white/75 p-3 text-[var(--accent-strong)]">
-                  <Phone className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="mt-4 text-sm font-medium text-[var(--foreground)]">
-                {contact.phone}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="gift" className="section-shell px-5 pt-9">
-        <SectionHeading
-          eyebrow="Gift"
-          title="마음 전하실 곳"
-          description="계좌 안내는 과하게 전면에 두지 않고, 필요한 분들만 바로 확인할 수 있게 차분하게 배치합니다."
-        />
-        <div className="grid gap-3">
-          {invitation.giftAccounts.map((account) => (
-            <div key={account.accountNumber} className="surface-card px-5 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                    {account.bank}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
-                    {account.accountHolder}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-                    {account.accountNumber}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="rounded-full bg-white/75 p-3 text-[var(--accent-strong)]">
-                    <Wallet className="h-5 w-5" />
-                  </div>
-                  <CopyButton value={account.accountNumber} label="계좌 복사" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="faq" className="section-shell px-5 pt-9">
-        <SectionHeading
-          eyebrow="FAQ"
-          title="자주 묻는 안내"
-          description="모바일 청첩장에서 이탈을 줄이기 위해 문의가 많은 항목은 접기/펼치기 형태로 제공합니다."
-        />
-        <div className="space-y-3">
-          {invitation.faqItems.map((item) => (
-            <details key={item.id} className="surface-card px-5 py-4">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-[var(--foreground)]">
-                {item.question}
-                <ChevronRight className="h-5 w-5 text-[var(--muted)]" />
-              </summary>
-              <p className="pt-3 text-sm leading-7 text-[var(--muted)]">
-                {item.answer}
-              </p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section id="rsvp" className="section-shell px-5 pb-6 pt-9">
+    <main className="flex-1 pb-20">
+      <Hero invitation={invitation} hasHeroImage={hasHeroImage} />
+      <SectionNav links={quickLinks} />
+      <InvitationIntro invitation={invitation} />
+      <ScheduleAndLocation invitation={invitation} />
+      <GallerySection invitation={invitation} />
+      <section id="rsvp" className="section-shell section-block px-5">
         <SectionHeading
           eyebrow="RSVP"
           title="참석 여부를 알려주세요"
-          description="이름, 연락처, 참석 여부만 빠르게 입력할 수 있게 구성하고, 필요 정보만 추가로 받도록 단순화했습니다."
+          description="입력은 단순하게 유지하고, 마지막까지 편하게 작성할 수 있도록 시각적 무게를 줄였습니다."
         />
-        <RsvpForm invitationId={invitation.id} />
-      </section>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 px-5">
-        <div className="section-shell">
-          <div className="surface-card pointer-events-auto flex items-center gap-3 px-4 py-3">
-            <a
-              href="#rsvp"
-              className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-sm font-semibold text-white"
-            >
-              <Heart className="h-4 w-4" />
-              RSVP
-            </a>
-            <a
-              href={invitation.mapLinks.naver}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-white/80 px-4 text-sm font-semibold text-[var(--foreground)]"
-            >
-              <MapPinned className="h-4 w-4" />
-              길찾기
-            </a>
-          </div>
+        <div className="mt-8">
+          <RsvpForm invitationId={invitation.id} />
         </div>
-      </div>
+      </section>
+      <AdditionalInfoSection invitation={invitation} />
     </main>
   );
 }
