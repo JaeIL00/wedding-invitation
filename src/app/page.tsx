@@ -92,37 +92,40 @@ function Hero({
   hasHeroImage: boolean;
 }) {
   return (
-    <section className="section-shell px-5 pt-5">
-      <div className="hero-shell">
-        <HeroImage invitation={invitation} hasHeroImage={hasHeroImage} />
+    <section>
+      <HeroImage invitation={invitation} hasHeroImage={hasHeroImage} />
 
-        <div className="hero-copy">
-          <p className="hero-kicker">Wedding invitation</p>
-          <p className="hero-date">{invitation.scheduleSummary}</p>
-          <h1 className="hero-title">
-            <span>{invitation.groomName}</span>
-            <span className="hero-title__ampersand">&</span>
-            <span>{invitation.brideName}</span>
-          </h1>
-          <p className="hero-description">{invitation.subtitle}</p>
-        </div>
-
-        <div className="hero-meta">
-          <div className="hero-meta__item">
-            <CalendarDays className="h-4 w-4" />
-            <div>
-              <p className="hero-meta__label">예식 일시</p>
-              <p className="hero-meta__value">{invitation.ceremonyLabel}</p>
-            </div>
+      <div className="section-shell px-5 pt-5">
+        <div className="hero-shell">
+          <div className="hero-copy">
+            <p className="hero-kicker">Wedding invitation</p>
+            <p className="hero-date">{invitation.scheduleSummary}</p>
+            <h1 className="hero-title">
+              <span>{invitation.groomName}</span>
+              <span className="hero-title__ampersand">&</span>
+              <span>{invitation.brideName}</span>
+            </h1>
+            <p className="hero-description">{invitation.subtitle}</p>
           </div>
-          <div className="hero-meta__item">
-            <MapPinned className="h-4 w-4" />
-            <div>
-              <p className="hero-meta__label">예식 장소</p>
-              <p className="hero-meta__value">
-                {invitation.venueName}
-                {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
-              </p>
+
+          <div className="hero-meta">
+            <div className="hero-meta__item">
+              <CalendarDays className="h-4 w-4" />
+              <div>
+                <p className="hero-meta__label">예식 일시</p>
+                <p className="hero-meta__value">{invitation.ceremonyLabel}</p>
+              </div>
+            </div>
+
+            <div className="hero-meta__item">
+              <MapPinned className="h-4 w-4" />
+              <div>
+                <p className="hero-meta__label">예식 장소</p>
+                <p className="hero-meta__value">
+                  {invitation.venueName}
+                  {invitation.venueFloor ? ` · ${invitation.venueFloor}` : ""}
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -116,15 +116,15 @@ textarea {
 
 .hero-image {
   margin: 0;
+  width: 100%;
 }
 
 .hero-image__frame {
   position: relative;
   aspect-ratio: 4 / 5;
   overflow: hidden;
-  border-radius: 1.8rem;
+  border-radius: 0;
   background: var(--surface-soft);
-  box-shadow: var(--shadow-soft);
 }
 
 .hero-copy {
