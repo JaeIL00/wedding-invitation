@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: wedding-invitation-postgres
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wedding_invitation}
+      POSTGRES_USER: ${POSTGRES_USER:-wedding_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wedding_app}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

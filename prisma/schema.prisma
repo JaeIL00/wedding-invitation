@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GalleryLayoutType {
+  HERO
+  WIDE
+  TALL
+  GRID
+}
+
+enum RsvpStatus {
+  ATTENDING
+  DECLINED
+}
+
+enum MealPreference {
+  YES
+  NO
+  TBD
+}
+
+model Invitation {
+  id                  Int                  @id @default(autoincrement())
+  slug                String               @unique
+  isPublished         Boolean              @default(true)
+  title               String
+  subtitle            String
+  groomName           String
+  brideName           String
+  ceremonyAt          DateTime
+  venueName           String
+  venueFloor          String?
+  address             String
+  addressDetail       String?
+  directions          String               @db.Text
+  transitTips         String               @db.Text
+  heroMoodTitle       String
+  heroMoodDescription String               @db.Text
+  welcomeTitle        String
+  welcomeMessage      String               @db.Text
+  scheduleSummary     String
+  hostMessage         String?              @db.Text
+  contactCards        Json
+  giftAccounts        Json
+  galleryItems        GalleryPlaceholder[]
+  faqItems            FaqItem[]
+  rsvps               Rsvp[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model GalleryPlaceholder {
+  id            Int               @id @default(autoincrement())
+  invitationId  Int
+  order         Int
+  layoutType    GalleryLayoutType
+  title         String
+  description   String            @db.Text
+  accentColor   String
+  invitation    Invitation        @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, order])
+}
+
+model FaqItem {
+  id            Int         @id @default(autoincrement())
+  invitationId  Int
+  order         Int
+  question      String
+  answer        String      @db.Text
+  invitation    Invitation  @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, order])
+}
+
+model Rsvp {
+  id               Int            @id @default(autoincrement())
+  invitationId     Int
+  name             String
+  phone            String
+  normalizedPhone  String
+  status           RsvpStatus
+  companionCount   Int            @default(0)
+  mealPreference   MealPreference
+  note             String?        @db.Text
+  createdAt        DateTime       @default(now())
+  invitation       Invitation     @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, normalizedPhone])
+}
