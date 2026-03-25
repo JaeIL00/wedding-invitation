@@ -380,22 +380,51 @@ function AdditionalInfoSection({
   );
 }
 
+function SetupNeededState() {
+  return (
+    <main className="section-shell flex min-h-screen items-center px-5 py-16">
+      <div className="empty-state w-full">
+        <p className="section-eyebrow">Setup needed</p>
+        <h1 className="empty-state__title">청첩장 데이터가 아직 없습니다.</h1>
+        <p className="empty-state__body">
+          `yarn db:up`, `yarn db:migrate --name init`, `yarn db:seed` 순서로
+          실행하면 첫 화면이 채워집니다.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function RuntimeErrorState({ message }: { message: string }) {
+  return (
+    <main className="section-shell flex min-h-screen items-center px-5 py-16">
+      <div className="empty-state w-full">
+        <p className="section-eyebrow">Runtime error</p>
+        <h1 className="empty-state__title">홈 화면 렌더링에 실패했습니다.</h1>
+        <p className="empty-state__body">{message}</p>
+      </div>
+    </main>
+  );
+}
+
 export default async function Home() {
-  const invitation = await getInvitationViewModel();
+  let invitation: InvitationViewModel | null;
+  let runtimeError: string | null = null;
+
+  try {
+    invitation = await getInvitationViewModel();
+  } catch (error) {
+    console.error("Failed to render home page", error);
+    invitation = null;
+    runtimeError = error instanceof Error ? error.message : "Unknown error";
+  }
+
+  if (runtimeError) {
+    return <RuntimeErrorState message={runtimeError} />;
+  }
 
   if (!invitation) {
-    return (
-      <main className="section-shell flex min-h-screen items-center px-5 py-16">
-        <div className="empty-state w-full">
-          <p className="section-eyebrow">Setup needed</p>
-          <h1 className="empty-state__title">청첩장 데이터가 아직 없습니다.</h1>
-          <p className="empty-state__body">
-            `yarn db:up`, `yarn db:migrate --name init`, `yarn db:seed` 순서로
-            실행하면 첫 화면이 채워집니다.
-          </p>
-        </div>
-      </main>
-    );
+    return <SetupNeededState />;
   }
 
   const hasHeroImage = await hasPublicAsset(HERO_IMAGE_PATH);
